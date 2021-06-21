@@ -9,7 +9,7 @@
 #include <iostream>
 #include <Formatter.hpp>
 
-double BinnedNLLH::Init(){
+void BinnedNLLH::Init(){
   fSystematicManager.Construct();
 }
 

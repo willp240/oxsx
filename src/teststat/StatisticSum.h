@@ -16,6 +16,7 @@ class StatisticSum : public TestStatistic{
 
     // Test Statistic Interface
     virtual double Evaluate();
+    virtual void   Init(){};
     virtual void   SetParameters(const ParameterDict& params_);
     virtual ParameterDict GetParameters() const;
     virtual int    GetParameterCount() const;

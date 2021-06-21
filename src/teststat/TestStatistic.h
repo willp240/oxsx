@@ -15,6 +15,7 @@ class TestStatistic{
     virtual ~TestStatistic() {}
 
     virtual double Evaluate() = 0;    
+    virtual void   Init();
     virtual void   SetParameters(const ParameterDict& params_) = 0;
     virtual ParameterDict GetParameters() const = 0;
     virtual int    GetParameterCount() const = 0;
