@@ -149,6 +149,7 @@ BinnedEDShrinker::ShrinkDist(const BinnedED& dist_) const{
     // bin by bin of old pdf
 
     for(size_t i = 0; i < dist_.GetNBins(); i++){
+
       content = dist_.GetBinContent(i);
       if(!content) // no content no problem
 	continue;
