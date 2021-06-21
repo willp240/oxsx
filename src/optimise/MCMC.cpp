@@ -184,6 +184,7 @@ MCMC::Optimise(TestStatistic* testStat_){
     std::cout << std::endl;
 
     pTestStatistic->SetParameters(fCurrentStep);
+    pTestStatistic->Init();
     fCurrentVal = pTestStatistic->Evaluate();
     if(fFlipSign)
         fCurrentVal *= -1;
@@ -240,7 +241,7 @@ MCMC::StepAccepted(const ParameterDict& proposedStep_){
     if(fCurrentVal > fMaxVal){
         fMaxVal = fCurrentVal;
         fBestFit = fCurrentStep;
-    }    
+    }
 
     long double acceptanceParam = 0;
     if(fTestStatLogged)
