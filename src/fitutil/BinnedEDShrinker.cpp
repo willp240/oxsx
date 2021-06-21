@@ -54,13 +54,71 @@ BinnedEDShrinker::ShrinkAxis(const BinAxis& axis_, const unsigned lowerBuff_,
     return BinAxis(axis_.GetName(), lowEdges, highEdges, axis_.GetLatexName());
 }
 
+void
+BinnedEDShrinker::SetBinMap(const BinnedED& dist_ ) {
+
+  // No buffer no problem. FIXME: what about if all the values are zero?
+  if (!fBuffers.size())
+    return ;
+
+  size_t nDims = dist_.GetNDims();
+
+  // FIXME Add a check to see if the non zero entries of fBuffers are in the pdf and give warning
+
+  // 1. Build new axes. ShrinkPdf method just makes a copy if buffer size is zero
+  AxisCollection newAxes;
+  for(size_t i = 0; i < nDims; i++){
+    const std::string& axisName = dist_.GetAxes().GetAxis(i).GetName();
+    if (!fBuffers.count(axisName))
+      newAxes.AddAxis(dist_.GetAxes().GetAxis(i));
+    else
+      newAxes.AddAxis(ShrinkAxis(dist_.GetAxes().GetAxis(i),
+				 fBuffers.at(axisName).first,
+				 fBuffers.at(axisName).second));
+  }
+
+  // 2. Find corresponding bins
+  std::vector<size_t> newIndices(dist_.GetNDims());  // same as old, just corrected for overflow
+  int   offsetIndex = 0; // note taking difference of two unsigneds
+  size_t newBin = 0;     //  will loop over dims and use this to assign bin # corrected for overflow
+
+  const AxisCollection& axes = dist_.GetAxes();
+
+  // bin by bin of old pdf
+  for(size_t i = 0; i < dist_.GetNBins(); i++){
+
+    // work out the index of this bin in the new shrunk pdf.
+    for(size_t j = 0; j < nDims; j++){
+      std::string axisName = axes.GetAxis(j).GetName();
+      offsetIndex = axes.UnflattenIndex(i, j);            // the index in old pdf
+      if (fBuffers.count(axisName))          // offset by lower buffer if nonzero
+	offsetIndex -= fBuffers.at(axisName).first;
+
+      // Correct the ones that fall in the buffer regions
+      // bins in the lower buffer have negative index. Put in first bin in fit region or ignore
+      if (offsetIndex < 0){
+	offsetIndex = 0;
+      }
+      // bins in the upper buffer have i > number of bins in axis j. Do the same
+      if (offsetIndex >= newAxes.GetAxis(j).GetNBins()){
+	offsetIndex = newAxes.GetAxis(j).GetNBins() - 1;
+      }
+
+      newIndices[j] = offsetIndex;
+    }
+    // Fill
+    newBin = newAxes.FlattenIndices(newIndices);
+    fBinMap.insert(std::make_pair(i, newBin));
+  }
+} 
+
 BinnedED
 BinnedEDShrinker::ShrinkDist(const BinnedED& dist_) const{
 
     // No buffer no problem. FIXME: what about if all the values are zero?
     if (!fBuffers.size())
         return dist_;
-    
+
     size_t nDims = dist_.GetNDims();
 
     // FIXME Add a check to see if the non zero entries of fBuffers are in the pdf and give warning
@@ -89,42 +147,15 @@ BinnedEDShrinker::ShrinkDist(const BinnedED& dist_) const{
     const AxisCollection& axes = dist_.GetAxes();
     double content = 0;
     // bin by bin of old pdf
+
     for(size_t i = 0; i < dist_.GetNBins(); i++){
-        content = dist_.GetBinContent(i);
-        if(!content) // no content no problem
-            continue;
+      content = dist_.GetBinContent(i);
+      if(!content) // no content no problem
+	continue;
 
-        // work out the index of this bin in the new shrunk pdf.
-        for(size_t j = 0; j < nDims; j++){
-            std::string axisName = axes.GetAxis(j).GetName();
-            offsetIndex = axes.UnflattenIndex(i, j);            // the index in old pdf
-            if (fBuffers.count(axisName))          // offset by lower buffer if nonzero
-                offsetIndex -= fBuffers.at(axisName).first;
-
-            // Correct the ones that fall in the buffer regions
-            // bins in the lower buffer have negative index. Put in first bin in fit region or ignore
-            if (offsetIndex < 0){
-                offsetIndex = 0;
-                if(!fUsingOverflows)
-                    content = 0;
-
-            }
-
-            // bins in the upper buffer have i > number of bins in axis j. Do the same
-            if (offsetIndex >= newAxes.GetAxis(j).GetNBins()){
-                offsetIndex = newAxes.GetAxis(j).GetNBins() - 1;
-
-                if (!fUsingOverflows)
-                    content = 0;
-            }
-
-            newIndices[j] = offsetIndex;
-        }
-        // Fill 
-        newBin = newAxes.FlattenIndices(newIndices);
-        newDist.AddBinContent(newBin, content);
+      newBin = fBinMap.at(i);//  fBinMap.at(dist_.GetName()).at(i);
+      newDist.AddBinContent(newBin, content);
     }
-
     return newDist;
 }
 
