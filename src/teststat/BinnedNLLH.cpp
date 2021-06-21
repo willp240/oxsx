@@ -9,6 +9,10 @@
 #include <iostream>
 #include <Formatter.hpp>
 
+double BinnedNLLH::Init(){
+  fSystematicManager.Construct();
+}
+
 double 
 BinnedNLLH::Evaluate(){
     if(!fDataSet && !fCalculatedDataDist) 
@@ -18,13 +22,11 @@ BinnedNLLH::Evaluate(){
         BinData();
     
     if(!fAlreadyShrunk){
-        fDataDist = fPdfShrinker.ShrinkDist(fDataDist);
+        fPdfShrinker.SetBinMap(fDataDist);
+        fDataDist = fPdfShrinker.ShrinkDist(fDataDist);	
         fAlreadyShrunk = true;
     }
 
-
-    // Construct systematics 
-    fSystematicManager.Construct(); 
     // Apply systematics
     fPdfManager.ApplySystematics(fSystematicManager);
 
