@@ -66,13 +66,13 @@ BinnedEDShrinker::SetBinMap(const BinnedED& dist_ ) {
   // FIXME Add a check to see if the non zero entries of fBuffers are in the pdf and give warning
 
   // 1. Build new axes. ShrinkPdf method just makes a copy if buffer size is zero
-  AxisCollection newAxes;
+  
   for(size_t i = 0; i < nDims; i++){
     const std::string& axisName = dist_.GetAxes().GetAxis(i).GetName();
     if (!fBuffers.count(axisName))
-      newAxes.AddAxis(dist_.GetAxes().GetAxis(i));
+      fNewAxes.AddAxis(dist_.GetAxes().GetAxis(i));
     else
-      newAxes.AddAxis(ShrinkAxis(dist_.GetAxes().GetAxis(i),
+      fNewAxes.AddAxis(ShrinkAxis(dist_.GetAxes().GetAxis(i),
 				 fBuffers.at(axisName).first,
 				 fBuffers.at(axisName).second));
   }
@@ -100,15 +100,15 @@ BinnedEDShrinker::SetBinMap(const BinnedED& dist_ ) {
 	offsetIndex = 0;
       }
       // bins in the upper buffer have i > number of bins in axis j. Do the same
-      if (offsetIndex >= newAxes.GetAxis(j).GetNBins()){
-	offsetIndex = newAxes.GetAxis(j).GetNBins() - 1;
+      if (offsetIndex >= fNewAxes.GetAxis(j).GetNBins()){
+	offsetIndex = fNewAxes.GetAxis(j).GetNBins() - 1;
       }
 
       newIndices[j] = offsetIndex;
     }
     // Fill
-    newBin = newAxes.FlattenIndices(newIndices);
-    fBinMap.insert(std::make_pair(i, newBin));
+    newBin = fNewAxes.FlattenIndices(newIndices);
+    fBinVec.push_back(newBin);
   }
 } 
 
@@ -119,44 +119,26 @@ BinnedEDShrinker::ShrinkDist(const BinnedED& dist_) const{
     if (!fBuffers.size())
         return dist_;
 
-    size_t nDims = dist_.GetNDims();
+    // Initialise the new pdf with same observables
 
-    // FIXME Add a check to see if the non zero entries of fBuffers are in the pdf and give warning
-
-    // 1. Build new axes. ShrinkPdf method just makes a copy if buffer size is zero
-    AxisCollection newAxes;
-    for(size_t i = 0; i < nDims; i++){
-        const std::string& axisName = dist_.GetAxes().GetAxis(i).GetName();
-        if (!fBuffers.count(axisName))
-            newAxes.AddAxis(dist_.GetAxes().GetAxis(i));
-        else
-            newAxes.AddAxis(ShrinkAxis(dist_.GetAxes().GetAxis(i),
-                                       fBuffers.at(axisName).first,
-                                       fBuffers.at(axisName).second));
-    }
-
-    // 2. Initialise the new pdf with same observables
-    BinnedED newDist(dist_.GetName() + "_shrunk", newAxes);
+    BinnedED newDist(dist_.GetName() + "_shrunk", fNewAxes);
     newDist.SetObservables(dist_.GetObservables());
+    
 
-    // 3. Fill the axes
-    std::vector<size_t> newIndices(dist_.GetNDims());  // same as old, just corrected for overflow
-    int   offsetIndex = 0; // note taking difference of two unsigneds
+    // Fill the axes
     size_t newBin = 0;     //  will loop over dims and use this to assign bin # corrected for overflow
-
-    const AxisCollection& axes = dist_.GetAxes();
     double content = 0;
-    // bin by bin of old pdf
-
+    
+    // bin by bin of old pdf    
     for(size_t i = 0; i < dist_.GetNBins(); i++){
 
       content = dist_.GetBinContent(i);
       if(!content) // no content no problem
 	continue;
 
-      newBin = fBinMap.at(i);//  fBinMap.at(dist_.GetName()).at(i);
+      newBin = fBinVec.at(i);
       newDist.AddBinContent(newBin, content);
-    }
+      }
     return newDist;
 }
 

@@ -32,7 +32,9 @@ class BinnedEDShrinker{
  private:
     // Pairs of lower/upper buffer sizes in number of bins, keyed by diminension to shrink
     std::map<std::string, std::pair<unsigned, unsigned> > fBuffers;
-    std::map<unsigned, unsigned> fBinMap;
+    std::vector<int> fBinVec;
     bool fUsingOverflows; // false at initialisation
+    AxisCollection fNewAxes;
+
 };
 #endif
